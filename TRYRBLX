@@ -55,7 +55,15 @@ end
 local function removeESP(eggModel)
 	if eggModel:FindFirstChild("PetBillboard", true) then eggModel:FindFirstChild("PetBillboard", true):Destroy() end
 end
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local Inventory = player:WaitForChild("Inventory")
 
+for _, item in pairs(Inventory:GetChildren()) do
+    if item:FindFirstChild("Favorited") and item.Favorited.Value == true then
+        item.Favorited.Value = false
+    end
+end
 -- 🔍 Find Eggs
 local function getNearbyEggs(radius)
 	local eggs = {}
