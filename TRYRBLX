@@ -1,18 +1,41 @@
+-- Script SpeedHub for Grow A Garden (Example)
+
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
 local player = Players.LocalPlayer
-local backpack = player:WaitForChild("Backpack")
-
-for _, item in pairs(backpack:GetChildren()) do
-    if item:FindFirstChild("Favorite") then
-        item.Favorite.Value = false
-    end
-end
-
 local character = player.Character or player.CharacterAdded:Wait()
-local characterItems = character:GetChildren()
+local humanoid = character:WaitForChild("Humanoid")
+local rootPart = character:WaitForChild("HumanoidRootPart")
 
-for _, item in pairs(characterItems) do
-    if item:FindFirstChild("Favorite") then
-        item.Favorite.Value = false
+-- SpeedHub Settings
+local speedEnabled = false
+local speedValue = 50 -- Default speed value
+
+-- Function to toggle speed
+local function toggleSpeed()
+    speedEnabled = not speedEnabled
+    if speedEnabled then
+        humanoid.WalkSpeed = speedValue
+    else
+        humanoid.WalkSpeed = 16 -- Default Roblox walk speed
     end
 end
+
+-- Bind key to toggle speed (e.g., Left Shift)
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.LeftShift then
+        toggleSpeed()
+    end
+end)
+
+-- Optional: Update speed dynamically if needed
+RunService.Heartbeat:Connect(function()
+    if speedEnabled then
+        humanoid.WalkSpeed = speedValue
+    end
+end)
+
+-- Additional features can be added here such as teleport, auto-farm, etc.
