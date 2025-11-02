@@ -563,8 +563,8 @@ local Gift = Window:Tab({Title = "Gift", Icon = "gift"})
 
 local AutoGiftPet = false
 local GiftInterval = 10
-local TargetPlayer = "FriendName" -- ubah sesuai target
-local SelectedPetName = "Basic Brainrot" -- ubah sesuai nama pet yang ingin dikirim
+local TargetPlayer = "Lilicyy90"
+local SelectedPetName = "Capybara" "Rainbow Mimic Octopus" "Dilophosaurus"
 
 Gift:Section({Title = "Auto Gift Pet", Icon = "gift"})
 
