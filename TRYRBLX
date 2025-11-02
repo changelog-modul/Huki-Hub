@@ -1,317 +1,125 @@
-```lua
---[[
-    @author depso (depthso)
-    @description Grow a Garden auto-farm script
-    https://www.roblox.com/games/126884695634066
-]]
-
---// Services
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local InsertService = game:GetService("InsertService")
-local MarketplaceService = game:GetService("MarketplaceService")
+-- Services
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
-local LocalPlayer = Players.LocalPlayer
-local Leaderstats = LocalPlayer:WaitForChild("leaderstats")
-local Backpack = LocalPlayer:WaitForChild("Backpack")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+-- Variables
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
 
-local ShecklesCount = Leaderstats:WaitForChild("Sheckles")
-local GameInfo = MarketplaceService:GetProductInfo(game.PlaceId)
+-- Create ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "WalkSpeedGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
 
---// ReGui
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
-local PrefabsId = "rbxassetid://" .. ReGui.PrefabsId
+-- Create Frame
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 200, 0, 100)
+frame.Position = UDim2.new(0, 20, 0, 20)
+frame.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+frame.BackgroundTransparency = 0.3
+frame.BorderSizePixel = 0
+frame.Parent = screenGui
 
---// Folders
-local GameEvents = ReplicatedStorage:WaitForChild("GameEvents")
-local Farms = workspace:WaitForChild("Farm")
+-- Create Title Label
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 25)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "WalkSpeed Controller"
+titleLabel.TextColor3 = Color3.new(1, 1, 1)
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 18
+titleLabel.Parent = frame
 
-local Accent = {
-    DarkGreen = Color3.fromRGB(45, 95, 25),
-    Green = Color3.fromRGB(69, 142, 40),
-    Brown = Color3.fromRGB(26, 20, 8),
-}
+-- Create Slider Frame
+local sliderFrame = Instance.new("Frame")
+sliderFrame.Size = UDim2.new(1, -20, 0, 40)
+sliderFrame.Position = UDim2.new(0, 10, 0, 40)
+sliderFrame.BackgroundTransparency = 1
+sliderFrame.Parent = frame
 
---// ReGui configuration (Ui library)
-ReGui:Init({
-	Prefabs = InsertService:LoadLocalAsset(PrefabsId)
-})
-ReGui:DefineTheme("GardenTheme", {
-	WindowBg = Accent.Brown,
-	TitleBarBg = Accent.DarkGreen,
-	TitleBarBgActive = Accent.Green,
-    ResizeGrab = Accent.DarkGreen,
-    FrameBg = Accent.DarkGreen,
-    FrameBgActive = Accent.Green,
-	CollapsingHeaderBg = Accent.Green,
-    ButtonsBg = Accent.Green,
-    CheckMark = Accent.Green,
-    SliderGrab = Accent.Green,
-})
+-- Create Slider Bar
+local sliderBar = Instance.new("Frame")
+sliderBar.Size = UDim2.new(1, 0, 0, 6)
+sliderBar.Position = UDim2.new(0, 0, 0.5, -3)
+sliderBar.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+sliderBar.Parent = sliderFrame
 
---// Dicts
-local SeedStock = {}
-local OwnedSeeds = {}
-local HarvestIgnores = {
-	Normal = false,
-	Gold = false,
-	Rainbow = false
-}
+-- Create Slider Fill
+local sliderFill = Instance.new("Frame")
+sliderFill.Size = UDim2.new(0, 0, 1, 0)
+sliderFill.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+sliderFill.Parent = sliderBar
 
---// Globals
-local SelectedSeed = nil
-local AutoPlantRandom = false
-local AutoPlant = false
-local AutoHarvest = false
-local AutoBuy = false
-local SellThreshold = 1000
-local NoClip = false
-local AutoWalkAllowRandom = false
+-- Create Slider Button
+local sliderButton = Instance.new("ImageButton")
+sliderButton.Size = UDim2.new(0, 20, 0, 20)
+sliderButton.Position = UDim2.new(0, 0, 0.5, -10)
+sliderButton.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+sliderButton.BackgroundTransparency = 1
+sliderButton.Image = "rbxassetid://3570695787" -- Circle image
+sliderButton.Parent = sliderBar
 
-local function CreateWindow()
-	local Window = ReGui:Window({
-		Title = string.format("%s | Depso", GameInfo.Name),
-        Theme = "GardenTheme",
-		Size = UDim2.fromOffset(300, 200)
-	})
-	return Window
+-- Create Value Label
+local valueLabel = Instance.new("TextLabel")
+valueLabel.Size = UDim2.new(1, 0, 0, 20)
+valueLabel.Position = UDim2.new(0, 0, 1, 0)
+valueLabel.BackgroundTransparency = 1
+valueLabel.TextColor3 = Color3.new(1, 1, 1)
+valueLabel.Font = Enum.Font.SourceSans
+valueLabel.TextSize = 16
+valueLabel.Text = "Speed: 16"
+valueLabel.Parent = frame
+
+-- Variables for slider
+local minSpeed = 16
+local maxSpeed = 100
+local dragging = false
+
+local function updateSpeed(inputPosX)
+	local relativeX = math.clamp(inputPosX - sliderBar.AbsolutePosition.X, 0, sliderBar.AbsoluteSize.X)
+	local percent = relativeX / sliderBar.AbsoluteSize.X
+	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+	sliderButton.Position = UDim2.new(percent, -10, 0.5, -10)
+	local speed = math.floor(minSpeed + (maxSpeed - minSpeed) * percent + 0.5)
+	valueLabel.Text = "Speed: "..speed
+	humanoid.WalkSpeed = speed
 end
 
---// Interface functions
-local function Plant(Position, Seed)
-	GameEvents.Plant_RE:FireServer(Position, Seed)
-	wait(0.3)
-end
-
-local function GetFarms()
-	return Farms:GetChildren()
-end
-
-local function GetFarmOwner(Farm)
-	local Important = Farm:FindFirstChild("Important")
-	if not Important then return nil end
-	local Data = Important:FindFirstChild("Data")
-	if not Data then return nil end
-	local Owner = Data:FindFirstChild("Owner")
-	if not Owner then return nil end
-
-	return Owner.Value
-end
-
-local function GetFarm(PlayerName)
-	local FarmsList = GetFarms()
-	for _, Farm in next, FarmsList do
-		local Owner = GetFarmOwner(Farm)
-		if Owner == PlayerName then
-			return Farm
-		end
+sliderButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = true
 	end
-    return nil
-end
+end)
 
-local IsSelling = false
-local function SellInventory()
-	local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	local Previous = Character:GetPivot()
-	local PreviousSheckles = ShecklesCount.Value
-
-	--// Prevent conflict
-	if IsSelling then return end
-	IsSelling = true
-
-	Character:PivotTo(CFrame.new(62, 4, -26))
-	while wait() do
-		if ShecklesCount.Value ~= PreviousSheckles then break end
-		GameEvents.Sell_Inventory:FireServer()
+sliderButton.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+		dragging = false
 	end
-	Character:PivotTo(Previous)
+end)
 
-	wait(0.2)
-	IsSelling = false
-end
-
-local function BuySeed(Seed)
-	GameEvents.BuySeedStock:FireServer(Seed)
-end
-
-local function BuyAllSelectedSeeds()
-    local Seed = SelectedSeed
-    local Stock = SeedStock[Seed]
-
-	if not Stock or Stock <= 0 then return end
-
-    for i = 1, Stock do
-        BuySeed(Seed)
-    end
-end
-
-local function GetSeedInfo(Seed)
-	local PlantName = Seed:FindFirstChild("Plant_Name")
-	local Count = Seed:FindFirstChild("Numbers")
-	if not PlantName then return nil end
-
-	return PlantName.Value, Count and Count.Value or 0
-end
-
-local function CollectSeedsFromParent(Parent, Seeds)
-	for _, Tool in next, Parent:GetChildren() do
-		local Name, Count = GetSeedInfo(Tool)
-		if not Name then continue end
-
-		Seeds[Name] = {
-            Count = Count,
-            Tool = Tool
-        }
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+		updateSpeed(input.Position.X)
 	end
+end)
+
+-- Initialize slider position to default WalkSpeed
+local function initSlider()
+	local defaultSpeed = humanoid.WalkSpeed
+	local percent = (defaultSpeed - minSpeed) / (maxSpeed - minSpeed)
+	percent = math.clamp(percent, 0, 1)
+	sliderFill.Size = UDim2.new(percent, 0, 1, 0)
+	sliderButton.Position = UDim2.new(percent, -10, 0.5, -10)
+	valueLabel.Text = "Speed: "..defaultSpeed
 end
 
-local function CollectCropsFromParent(Parent, Crops)
-	for _, Tool in next, Parent:GetChildren() do
-		local PlantName = Tool:FindFirstChild("Plant_Name")
-		if not PlantName then continue end
-		local Name = PlantName.Value
-		Crops[Name] = Crops[Name] and Crops[Name] + 1 or 1
-	end
-end
+initSlider()
 
--- Additional improvements: AutoPlant, AutoHarvest, AutoBuy, NoClip, and UI
-
-local Window = CreateWindow()
-
-local SeedsFolder = Backpack
-local function UpdateSeedStock()
-	SeedStock = {}
-	CollectSeedsFromParent(SeedsFolder, SeedStock)
-end
-
-local function AutoPlantLoop()
-	while AutoPlant do
-		UpdateSeedStock()
-		local Farm = GetFarm(LocalPlayer.Name)
-		if Farm then
-			local Plots = Farm:FindFirstChild("Plots")
-			if Plots then
-				for _, Plot in pairs(Plots:GetChildren()) do
-					if Plot:FindFirstChild("Plant") == nil then
-						if SelectedSeed and SeedStock[SelectedSeed] and SeedStock[SelectedSeed].Count > 0 then
-							Plant(Plot.Position, SelectedSeed)
-							wait(0.5)
-						end
-					end
-				end
-			end
-		end
-		wait(1)
-	end
-end
-
-local function AutoHarvestLoop()
-	while AutoHarvest do
-		local Farm = GetFarm(LocalPlayer.Name)
-		if Farm then
-			local CropsFolder = Farm:FindFirstChild("Crops")
-			if CropsFolder then
-				for _, Crop in pairs(CropsFolder:GetChildren()) do
-					local PlantName = Crop:FindFirstChild("Plant_Name")
-					if PlantName and not HarvestIgnores[PlantName.Value] then
-						GameEvents.Harvest_RE:FireServer(Crop)
-						wait(0.3)
-					end
-				end
-			end
-		end
-		wait(1)
-	end
-end
-
-local function AutoBuyLoop()
-	while AutoBuy do
-		if SelectedSeed then
-			BuyAllSelectedSeeds()
-		end
-		wait(5)
-	end
-end
-
-local function NoClipLoop()
-	local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-	local Humanoid = Character:WaitForChild("Humanoid")
-	while NoClip do
-		for _, part in pairs(Character:GetChildren()) do
-			if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-				part.CanCollide = false
-			end
-		end
-		wait(0.1)
-	end
-	-- Restore collisions when NoClip off
-	for _, part in pairs(Character:GetChildren()) do
-		if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
-			part.CanCollide = true
-		end
-	end
-end
-
--- UI Elements
-local SeedDropdown = Window:Dropdown({
-    Text = "Select Seed",
-    Options = {},
-    Callback = function(option)
-        SelectedSeed = option
-    end
-})
-
-local AutoPlantToggle = Window:Toggle({
-    Text = "Auto Plant",
-    Callback = function(state)
-        AutoPlant = state
-        if state then
-            spawn(AutoPlantLoop)
-        end
-    end
-})
-
-local AutoHarvestToggle = Window:Toggle({
-    Text = "Auto Harvest",
-    Callback = function(state)
-        AutoHarvest = state
-        if state then
-            spawn(AutoHarvestLoop)
-        end
-    end
-})
-
-local AutoBuyToggle = Window:Toggle({
-    Text = "Auto Buy Seeds",
-    Callback = function(state)
-        AutoBuy = state
-        if state then
-            spawn(AutoBuyLoop)
-        end
-    end
-})
-
-local SellButton = Window:Button({
-    Text = "Sell Inventory",
-    Callback = function()
-        spawn(SellInventory)
-    end
-})
-
-local NoClipToggle = Window:Toggle({
-    Text = "NoClip",
-    Callback = function(state)
-        NoClip = state
-        if state then
-            spawn(NoClipLoop)
-        end
-    end
-})
-
--- Update Seed Dropdown options periodically
-spawn(function()
-	while true do
-		Update
+-- Update humanoid reference if character respawns
+player.CharacterAdded:Connect(function(char)
+	character = char
+	humanoid = character:WaitForChild("Humanoid")
+	initSlider()
+end)
