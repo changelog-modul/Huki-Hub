@@ -210,6 +210,84 @@ end
 --// Auto farm functions
 local MyFarm = GetFarm(LocalPlayer.Name)
 local MyImportant = MyFarm.Important
+--// Auto-Trade System
+local IsTrading = false
+
+local function GetTradeEvent(Name)
+	local event = GameEvents:FindFirstChild(Name)
+	if not event then
+		warn("[AutoTrade] Event not found:", Name)
+	end
+	return event
+end
+
+local TradeRequest = GetTradeEvent("Trade_Request")
+local TradeAddItem = GetTradeEvent("Trade_AddItem")
+local TradeAccept = GetTradeEvent("Trade_Accept")
+local TradeCancel = GetTradeEvent("Trade_Cancel")
+
+-- Fungsi: Kirim permintaan trade ke pemain lain
+local function SendTradeRequest(TargetPlayer)
+	if not TradeRequest then return end
+	pcall(function()
+		TradeRequest:FireServer(TargetPlayer)
+	end)
+end
+
+-- Fungsi: Menambahkan semua item ke jendela trade
+local function AddAllItemsToTrade()
+	if not TradeAddItem then return end
+	local Backpack = LocalPlayer.Backpack
+
+	for _, item in ipairs(Backpack:GetChildren()) do
+		if item:IsA("Tool") or item:IsA("Model") then
+			pcall(function()
+				TradeAddItem:FireServer(item)
+			end)
+			task.wait(0.15) -- jeda supaya tidak spam
+		end
+	end
+end
+
+-- Fungsi: Terima trade
+local function AcceptTrade()
+	if not TradeAccept then return end
+	pcall(function()
+		TradeAccept:FireServer()
+	end)
+end
+
+-- Fungsi utama Auto Trade
+local function AutoTradeLoop()
+	if not AutoTrade or not AutoTrade.Value then return end
+	if IsTrading then return end
+	IsTrading = true
+
+	local Target = TradeTargetName and TradeTargetName.Text or nil
+	if not Target or Target == "" then
+		warn("[AutoTrade] No target specified!")
+		IsTrading = false
+		return
+	end
+
+	local Player = Players:FindFirstChild(Target)
+	if not Player then
+		warn("[AutoTrade] Player not found:", Target)
+		IsTrading = false
+		return
+	end
+
+	SendTradeRequest(Player)
+	task.wait(1)
+
+	AddAllItemsToTrade()
+	task.wait(1)
+
+	AcceptTrade()
+
+	IsTrading = false
+end
+
 local PlantLocations = MyImportant.Plant_Locations
 local PlantsPhysical = MyImportant.Plants_Physical
 
@@ -412,6 +490,21 @@ local function StartServices()
 		wait(math.random(1, MaxWait))
 	end)
 
+--// Auto-Trade
+local TradeNode = Window:TreeNode({Title="Auto-Trade 🎁"})
+TradeTargetName = TradeNode:InputText({
+	Label = "Target player name",
+	Text = ""
+})
+AutoTrade = TradeNode:Checkbox({
+	Value = false,
+	Label = "Enabled"
+})
+TradeNode:Button({
+	Text = "Trade all now",
+	Callback = AutoTradeLoop
+})
+
 	--// Auto-Harvest
 	MakeLoop(AutoHarvest, function()
 		HarvestPlants(PlantsPhysical)
@@ -543,6 +636,9 @@ AutoWalkMaxWait = WallNode:SliderInt({
 --// Connections
 RunService.Stepped:Connect(NoclipLoop)
 Backpack.ChildAdded:Connect(AutoSellCheck)
+
+--// Auto-Trade Loop
+MakeLoop(AutoTrade, AutoTradeLoop, 5)
 
 --// Services
 StartServices()
