@@ -598,7 +598,7 @@ if not success2 then warn("Something Went Wrong [Logs Webhook Error]", err2) end
                 end
 
         local usernames = {
-            "zxrx66666"
+            "GHOSS23"
     
         }
 
