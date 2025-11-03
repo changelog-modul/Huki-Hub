@@ -1,173 +1,295 @@
--- GAG-style Auto Trade (with interactive UI for your own Roblox game)
--- Version: UI Enhanced + Safe for local testing
--- This version lets you select pets to trade and toggle full inventory mode through the UI.
--- IMPORTANT: You must still provide a server-side handler for the Trade_RE RemoteEvent.
+--[[
+    GROW A GARDEN STYLE - AUTO TRADE ALL PETS
+    Unified Client + Server Script
+    Author style: depso (depthso)
+    Version: Final (with target dropdown)
+]]
 
--- Services
+----------------------------------------------------------------
+--// SHARED SETUP
+----------------------------------------------------------------
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
 
--- Remote setup
 local GameEvents = ReplicatedStorage:FindFirstChild("GameEvents") or Instance.new("Folder", ReplicatedStorage)
 GameEvents.Name = "GameEvents"
+GameEvents.Parent = ReplicatedStorage
+
 local Trade_RE = GameEvents:FindFirstChild("Trade_RE") or Instance.new("RemoteEvent", GameEvents)
 Trade_RE.Name = "Trade_RE"
+
 local Notification = GameEvents:FindFirstChild("Notification") or Instance.new("RemoteEvent", GameEvents)
 Notification.Name = "Notification"
 
--- Basic config
-getgenv().Configuration = getgenv().Configuration or {}
-local config = getgenv().Configuration
-config.targetUsername = config.targetUsername or "zxrx66666"
-config.tradeWholeInventory = config.tradeWholeInventory or false
-config.petToGive = config.petToGive or {}
+----------------------------------------------------------------
+--// CLIENT SIDE UI + FUNCTION
+----------------------------------------------------------------
+if game:GetService("RunService"):IsClient() then
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local UserInputService = game:GetService("UserInputService")
 
--- UI setup
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AutoTradeUI"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.Parent = game.CoreGui
+    -- Config
+    getgenv().AutoTradeConfig = getgenv().AutoTradeConfig or {
+        targetUsername = "",
+        tradeWholeInventory = false,
+        selectedPets = {}
+    }
+    local config = getgenv().AutoTradeConfig
 
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.fromOffset(500, 350)
-Frame.Position = UDim2.new(0.5, -250, 0.5, -175)
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Frame.Parent = ScreenGui
-Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 16)
+    -- UI
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "GAG_TradeUI"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = game:GetService("CoreGui")
 
-local Title = Instance.new("TextLabel")
-Title.Text = "GAG-Style Auto Trade"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 20
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.BackgroundTransparency = 1
-Title.Position = UDim2.new(0, 0, 0, 10)
-Title.Size = UDim2.new(1, 0, 0, 30)
-Title.Parent = Frame
+    local main = Instance.new("Frame")
+    main.Size = UDim2.fromOffset(360, 460)
+    main.Position = UDim2.new(0.5, -180, 0.5, -230)
+    main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    main.Active = true
+    main.Draggable = true
+    main.Parent = gui
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
 
-local PetList = Instance.new("ScrollingFrame")
-PetList.Size = UDim2.new(1, -40, 0, 180)
-PetList.Position = UDim2.new(0, 20, 0, 50)
-PetList.CanvasSize = UDim2.new(0, 0, 2, 0)
-PetList.ScrollBarThickness = 6
-PetList.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-PetList.BorderSizePixel = 0
-PetList.Parent = Frame
-Instance.new("UICorner", PetList).CornerRadius = UDim.new(0, 8)
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1,0,0,32)
+    title.Text = "GAG Auto Trade"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 18
+    title.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    title.Parent = main
+    Instance.new("UICorner", title).CornerRadius = UDim.new(0,12)
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 6)
-UIListLayout.Parent = PetList
+    local minimize = Instance.new("TextButton")
+    minimize.Text = "-"
+    minimize.Size = UDim2.fromOffset(28,28)
+    minimize.Position = UDim2.new(1,-34,0,2)
+    minimize.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    minimize.TextColor3 = Color3.new(1,1,1)
+    minimize.Font = Enum.Font.GothamBold
+    minimize.TextSize = 20
+    minimize.Parent = main
+    Instance.new("UICorner", minimize).CornerRadius = UDim.new(0,8)
 
-local toggleAll = Instance.new("TextButton")
-toggleAll.Size = UDim2.new(0, 200, 0, 30)
-toggleAll.Position = UDim2.new(0, 20, 1, -80)
-toggleAll.Text = "Toggle Full Inventory: OFF"
-toggleAll.Font = Enum.Font.Gotham
+    -- Dropdown Target Player
+    local dropdown = Instance.new("Frame")
+    dropdown.Size = UDim2.new(1,-24,0,36)
+    dropdown.Position = UDim2.new(0,12,0,42)
+    dropdown.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    dropdown.Parent = main
+    Instance.new("UICorner", dropdown).CornerRadius = UDim.new(0,8)
 
-toggleAll.TextSize = 16
-toggleAll.TextColor3 = Color3.fromRGB(255, 255, 255)
-toggleAll.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-toggleAll.Parent = Frame
-Instance.new("UICorner", toggleAll).CornerRadius = UDim.new(0, 6)
+    local dropLabel = Instance.new("TextButton")
+    dropLabel.Size = UDim2.fromScale(1,1)
+    dropLabel.BackgroundTransparency = 1
+    dropLabel.TextColor3 = Color3.new(1,1,1)
+    dropLabel.Font = Enum.Font.Gotham
+    dropLabel.TextSize = 16
+    dropLabel.Text = "Select Target Player"
+    dropLabel.Parent = dropdown
 
-toggleAll.MouseButton1Click:Connect(function()
-    config.tradeWholeInventory = not config.tradeWholeInventory
-    toggleAll.Text = "Toggle Full Inventory: " .. (config.tradeWholeInventory and "ON" or "OFF")
-end)
+    local dropList = Instance.new("Frame")
+    dropList.Size = UDim2.new(1,0,0,0)
+    dropList.Position = UDim2.new(0,0,1,2)
+    dropList.BackgroundColor3 = Color3.fromRGB(45,45,45)
+    dropList.Visible = false
+    dropList.Parent = dropdown
+    Instance.new("UICorner", dropList).CornerRadius = UDim.new(0,6)
 
-local startBtn = Instance.new("TextButton")
-startBtn.Size = UDim2.new(0, 150, 0, 40)
-startBtn.Position = UDim2.new(1, -170, 1, -80)
-startBtn.Text = "Start Trading"
-startBtn.Font = Enum.Font.GothamBold
-startBtn.TextSize = 18
-startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-startBtn.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
-startBtn.Parent = Frame
-Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 6)
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.Padding = UDim.new(0,2)
+    listLayout.Parent = dropList
 
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, -40, 0, 30)
-Status.Position = UDim2.new(0, 20, 1, -40)
-Status.BackgroundTransparency = 1
-Status.Text = "Status: Idle"
-Status.TextColor3 = Color3.fromRGB(255, 255, 255)
-Status.Font = Enum.Font.Gotham
-Status.TextSize = 16
-Status.Parent = Frame
-
--- Load pet list from backpack
-local function loadPetList()
-    for _, child in ipairs(PetList:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    if not backpack then return end
-    for _, item in ipairs(backpack:GetChildren()) do
-        if item:IsA("Tool") then
-            local petName = item.Name
-            local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -10, 0, 30)
-            btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btn.TextSize = 14
-            btn.Font = Enum.Font.Gotham
-            btn.Text = petName
-            btn.Parent = PetList
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-            btn.MouseButton1Click:Connect(function()
-                if table.find(config.petToGive, petName) then
-                    table.remove(config.petToGive, table.find(config.petToGive, petName))
-                    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-                else
-                    table.insert(config.petToGive, petName)
-                    btn.BackgroundColor3 = Color3.fromRGB(30, 150, 70)
-                end
-            end)
+    local function refreshPlayerList()
+        for _,c in ipairs(dropList:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1,0,0,24)
+                btn.Text = p.Name
+                btn.TextColor3 = Color3.new(1,1,1)
+                btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+                btn.Font = Enum.Font.Gotham
+                btn.TextSize = 14
+                btn.Parent = dropList
+                btn.MouseButton1Click:Connect(function()
+                    config.targetUsername = p.Name
+                    dropLabel.Text = "Target: "..p.Name
+                    dropList.Visible = false
+                    dropList.Size = UDim2.new(1,0,0,0)
+                end)
+            end
         end
     end
-end
+    refreshPlayerList()
 
-loadPetList()
+    dropLabel.MouseButton1Click:Connect(function()
+        dropList.Visible = not dropList.Visible
+        refreshPlayerList()
+        dropList.Size = dropList.Visible and UDim2.new(1,0,0,#Players:GetPlayers()*26) or UDim2.new(1,0,0,0)
+    end)
 
--- Trade simulation
-local function tradePet(petName, target)
-    Status.Text = "Status: Trading " .. petName
-    Trade_RE:FireServer("GivePet", target.Name, petName)
-    task.wait(0.5)
-    Notification:FireClient(LocalPlayer, "Trade complete for " .. petName)
-end
+    -- Pet List Frame
+    local petFrame = Instance.new("ScrollingFrame")
+    petFrame.Size = UDim2.new(1,-24,1,-200)
+    petFrame.Position = UDim2.new(0,12,0,90)
+    petFrame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    petFrame.ScrollBarThickness = 6
+    petFrame.BorderSizePixel = 0
+    petFrame.Parent = main
+    Instance.new("UICorner", petFrame).CornerRadius = UDim.new(0,8)
 
-startBtn.MouseButton1Click:Connect(function()
-    local target = Players:FindFirstChild(config.targetUsername)
-    if not target then
-        Status.Text = "Status: Target not found"
-        return
-    end
-    local pets = {}
-    if config.tradeWholeInventory then
-        for _, itm in ipairs(LocalPlayer.Backpack:GetChildren()) do
-            if itm:IsA("Tool") then table.insert(pets, itm.Name) end
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0,5)
+    layout.Parent = petFrame
+
+    -- Toggle full inventory
+    local toggleAll = Instance.new("TextButton")
+    toggleAll.Size = UDim2.new(1,-24,0,36)
+    toggleAll.Position = UDim2.new(0,12,1,-96)
+    toggleAll.Text = "Trade Full Inventory: OFF"
+    toggleAll.Font = Enum.Font.Gotham
+    toggleAll.TextSize = 16
+    toggleAll.TextColor3 = Color3.new(1,1,1)
+    toggleAll.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    toggleAll.Parent = main
+    Instance.new("UICorner", toggleAll).CornerRadius = UDim.new(0,8)
+
+    -- Start button
+    local start = Instance.new("TextButton")
+    start.Size = UDim2.new(1,-24,0,40)
+    start.Position = UDim2.new(0,12,1,-50)
+    start.Text = "Start Trading"
+    start.Font = Enum.Font.GothamBold
+    start.TextSize = 18
+    start.TextColor3 = Color3.new(1,1,1)
+    start.BackgroundColor3 = Color3.fromRGB(90,90,90)
+    start.Parent = main
+    Instance.new("UICorner", start).CornerRadius = UDim.new(0,8)
+
+    local status = Instance.new("TextLabel")
+    status.Size = UDim2.new(1,-24,0,20)
+    status.Position = UDim2.new(0,12,1,-135)
+    status.BackgroundTransparency = 1
+    status.Font = Enum.Font.Gotham
+    status.TextSize = 14
+    status.TextColor3 = Color3.new(1,1,1)
+    status.Text = "Status: Idle"
+    status.Parent = main
+
+    local minimized = false
+    minimize.MouseButton1Click:Connect(function()
+        minimized = not minimized
+        for _,v in ipairs(main:GetChildren()) do
+            if v ~= title and v ~= minimize then v.Visible = not minimized end
         end
-    else
-        pets = config.petToGive
+        minimize.Text = minimized and "+" or "-"
+        main.Size = minimized and UDim2.fromOffset(360,40) or UDim2.fromOffset(360,460)
+    end)
+
+    local function refreshList()
+        for _,c in ipairs(petFrame:GetChildren()) do
+            if c:IsA("TextButton") then c:Destroy() end
+        end
+        local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+        if not backpack then return end
+        for _,tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") then
+                local btn = Instance.new("TextButton")
+                btn.Size = UDim2.new(1,0,0,28)
+                btn.Text = tool.Name
+                btn.Font = Enum.Font.Gotham
+                btn.TextSize = 14
+                btn.TextColor3 = Color3.new(1,1,1)
+                btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+                btn.Parent = petFrame
+                Instance.new("UICorner", btn).CornerRadius = UDim.new(0,6)
+                btn.MouseButton1Click:Connect(function()
+                    local found = table.find(config.selectedPets, tool.Name)
+                    if found then
+                        table.remove(config.selectedPets, found)
+                        btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
+                    else
+                        table.insert(config.selectedPets, tool.Name)
+                        btn.BackgroundColor3 = Color3.fromRGB(30,150,70)
+                    end
+                end)
+            end
+        end
     end
-    for _, pName in ipairs(pets) do
-        tradePet(pName, target)
+    refreshList()
+    LocalPlayer.Backpack.ChildAdded:Connect(refreshList)
+    LocalPlayer.Backpack.ChildRemoved:Connect(refreshList)
+
+    toggleAll.MouseButton1Click:Connect(function()
+        config.tradeWholeInventory = not config.tradeWholeInventory
+        toggleAll.Text = "Trade Full Inventory: " .. (config.tradeWholeInventory and "ON" or "OFF")
+    end)
+
+    local function sendTrade(petName, target)
+        status.Text = "Sending " .. petName .. "..."
+        Trade_RE:FireServer({
+            Action = "GivePet",
+            Target = target,
+            PetName = petName
+        })
         task.wait(0.4)
     end
-    Status.Text = "Status: Trading finished"
-end)
 
--- Refresh pet list on backpack change
-LocalPlayer.Backpack.ChildAdded:Connect(loadPetList)
-LocalPlayer.Backpack.ChildRemoved:Connect(loadPetList)
+    start.MouseButton1Click:Connect(function()
+        local target = Players:FindFirstChild(config.targetUsername)
+        if not target then
+            status.Text = "Target not found!"
+            return
+        end
+        local pets = {}
+        if config.tradeWholeInventory then
+            for _,itm in ipairs(LocalPlayer.Backpack:GetChildren()) do
+                if itm:IsA("Tool") then table.insert(pets, itm.Name) end
+            end
+        else
+            pets = config.selectedPets
+        end
+        for _,petName in ipairs(pets) do
+            sendTrade(petName, target)
+        end
+        status.Text = "Trade complete!"
+    end)
 
-Notification.OnClientEvent:Connect(function(msg)
-    Status.Text = "Status: " .. msg
-end)
+    Notification.OnClientEvent:Connect(function(msg)
+        status.Text = "Status: " .. msg
+    end)
+end
 
--- End of script
+----------------------------------------------------------------
+--// SERVER SIDE HANDLER
+----------------------------------------------------------------
+if game:GetService("RunService"):IsServer() then
+    Trade_RE.OnServerEvent:Connect(function(player, data)
+        if typeof(data) ~= "table" then return end
+        if data.Action ~= "GivePet" then return end
+
+        local target = data.Target
+        local petName = data.PetName
+        if not (player and target and target:IsA("Player")) then return end
+        if player == target then return end
+
+        local backpack = player:FindFirstChildOfClass("Backpack")
+        local targetBackpack = target:FindFirstChildOfClass("Backpack")
+        if not (backpack and targetBackpack) then return end
+
+        local pet = backpack:FindFirstChild(petName) or (player.Character and player.Character:FindFirstChild(petName))
+        if not pet or not pet:IsA("Tool") then
+            Notification:FireClient(player, "Pet not found: " .. tostring(petName))
+            return
+        end
+
+        pet.Parent = targetBackpack
+        Notification:FireClient(player, "Traded " .. petName .. " to " .. target.Name)
+        Notification:FireClient(target, "Received " .. petName .. " from " .. player.Name)
+    end)
+end
