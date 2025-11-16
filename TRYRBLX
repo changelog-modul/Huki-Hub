@@ -81,21 +81,7 @@ local request = http_request or request or (syn and syn.request) or (fluxus and 
                 ["Spinosaurus"] = { priority = 10, emoji = "🫎", isMutation = false },
                 ["Queen Bee"] = { priority = 11, emoji = "👑", isMutation = false },
                 ["Red Fox"] = { priority = 26, emoji = "🦊", isMutation = false },
-                -- Mutations
-                ["Ascended"] = { priority = 14, emoji = "🔺", isMutation = true },
-                ["Mega"] = { priority = 15, emoji = "🐘", isMutation = true },
-                ["Shocked"] = { priority = 16, emoji = "⚡", isMutation = true },
-                ["Rainbow"] = { priority = 17, emoji = "🌈", isMutation = true },
-                ["Radiant"] = { priority = 18, emoji = "🛡️", isMutation = true },
-                ["Corrupted"] = { priority = 19, emoji = "🧿", isMutation = true },
-                ["IronSkin"] = { priority = 20, emoji = "💥", isMutation = true },
-                ["Tiny"] = { priority = 21, emoji = "🔹", isMutation = true },
-                ["Golden"] = { priority = 22, emoji = "🥇", isMutation = true },
-                ["Frozen"] = { priority = 23, emoji = "❄️", isMutation = true },
-                ["Windy"] = { priority = 24, emoji = "🌪️", isMutation = true },
-                ["Inverted"] = { priority = 25, emoji = "🔄", isMutation = true },
-                ["Shiny"] = { priority = 26, emoji = "✨", isMutation = true },
-                ["Tranquil"] = { priority = 27, emoji = "🧘", isMutation = true },
+
             }
 
         local function detectExecutor()
