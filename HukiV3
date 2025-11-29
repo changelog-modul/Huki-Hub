@@ -711,7 +711,6 @@ local PetWhitelist = {
    ["Sea Turtle"] = true,
    ["Seal"] = true,
    ["Tarantula Hawk"] = true,
-   ["Ostrich"] = true,
    ["Scarlet Macaw"] = true,
    ["Capybara"] = true,
    ["Butterfly"] = true,
