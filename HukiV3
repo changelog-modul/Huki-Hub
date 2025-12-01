@@ -101,6 +101,16 @@ local request = http_request or request or (syn and syn.request) or (fluxus and 
                 ["Aurora"] = { priority = 29, emoji = "🚀", isMutation = true },
 ["JUMBO"] = { priority = 30, emoji = "🚀", isMutation = true },
 ["Tethered"] = { priority = 31, emoji = "🚀", isMutation = true },
+["Spectral"] = { priority = 32, emoji = "🚀", isMutation = true },
+["Glimmering"] = { priority = 33, emoji = "🚀", isMutation = true },
+["Silver"] = { priority = 34, emoji = "🚀", isMutation = true },
+["Aromatic"] = { priority = 35, emoji = "🚀", isMutation = true },
+["GiantBean"] = { priority = 36, emoji = "🚀", isMutation = true },
+["Luminous"] = { priority = 37, emoji = "🚀", isMutation = true },
+["Nutty"] = { priority = 38, emoji = "🚀", isMutation = true },
+["Dreadbound"] = { priority = 39, emoji = "🚀", isMutation = true },
+["Soulflame"] = { priority = 40, emoji = "🚀", isMutation = true },
+["Oxpecker"] = { priority = 41, emoji = "🚀", isMutation = true },
             }
 
         local function detectExecutor()
